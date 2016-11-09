@@ -1,0 +1,90 @@
+-- Se crea un objeto igual al de la tabla de la Bd
+CREATE TYPE USUARIO_OBJECT IS OBJECT(
+  CEDULA CHAR(15),
+	NOMBRE CHAR(20),
+	APELLIDO CHAR(20)
+);
+/
+
+-- Se crea un tipo que simula ser una tabla que contiene a varios objetos de USUARIO_OBJECT
+CREATE TYPE USUARIOS_OUT AS TABLE OF USUARIO_OBJECT;
+/
+
+-- Se crea el paquete, primero la cabeza, donde se declaran los encabezados de los PROCEDURES & FUNCTIONS
+CREATE OR REPLACE PACKAGE SERVICIO_PLSQL IS
+
+  -- Procedimiento no retorna contenido
+  PROCEDURE INSERTAR_USUARIO (USUAR IN USUARIO_OBJECT);
+  PROCEDURE ACTUALIZAR_USUARIO (USUARIOCEDULA IN CHAR, USUARIOAPELLIDO IN CHAR);
+  PROCEDURE ELIMINAR_USUARIO (USUARIOCEDULA IN CHAR);
+  
+  -- Funcion retorna contenido
+  FUNCTION GET_USUARIOS RETURN USUARIOS_OUT;
+  --FUNCTION GET_USUARIO(CEDELACONSULTAR CHAR) RETURN USUARIO_OBJECT;
+  
+END;
+/
+
+-- Se crea el cuerpo del paquete, donde se declaran los cuerpos de los PROCEDURES AND FUCTIONS
+CREATE OR REPLACE PACKAGE BODY SERVICIO_PLSQL IS
+
+    PROCEDURE INSERTAR_USUARIO (USUAR IN USUARIO_OBJECT) AS
+    -- Si se necesita declarar variables locales, se declara acá en medio del AS y el BEGIN
+    BEGIN
+        INSERT INTO USUARIO VALUES(USUAR.CEDULA, USUAR.NOMBRE, USUAR.APELLIDO);
+    END;
+    
+    PROCEDURE ACTUALIZAR_USUARIO (USUARIOCEDULA IN CHAR, USUARIOAPELLIDO IN CHAR) AS
+    BEGIN 
+        UPDATE USUARIO SET APELLIDO = USUARIOAPELLIDO WHERE USUARIO.CEDULA = USUARIOCEDULA;
+    END;
+    
+    PROCEDURE ELIMINAR_USUARIO (USUARIOCEDULA IN CHAR) AS
+    BEGIN
+        DELETE FROM USUARIO WHERE USUARIO.CEDULA = USUARIOCEDULA;
+    END;
+    
+    
+    FUNCTION GET_USUARIOS RETURN USUARIOS_OUT IS
+      
+      v_rtn   USUARIOS_OUT := USUARIOS_OUT (null);
+      v_first boolean := true;
+
+      cursor C_GET_USUARIOS IS
+          SELECT *
+          FROM USUARIO;
+    
+      BEGIN
+        
+        FOR rec IN C_GET_USUARIOS LOOP
+          IF v_first THEN
+            v_first := FALSE;
+          ELSE
+            v_rtn.extend;
+          END IF;
+        
+        v_rtn(v_rtn.last) := USUARIO_OBJECT(REC.CEDULA, REC.NOMBRE, REC.APELLIDO);
+        END LOOP;    
+    
+        RETURN v_rtn;
+    END GET_USUARIOS;
+    
+    /*
+    FUNCTION GET_USUARIO(CEDELACONSULTAR IN CHAR) RETURN USUARIO_OBJECT IS
+      USUARIO_RETORNAR USUARIO_OBJECT := USUARIO_OBJECT(null);
+      
+      cursor C_GET_USUARIO IS
+        SELECT * FROM USUARIO
+        WHERE CEDULA = CEDELACONSULTAR;
+    BEGIN
+      
+      FOR rec IN C_GET_USUARIO LOOP        
+        USUARIO_RETORNAR := USUARIO_OBJECT(REC.CEDULA, REC.NOMBRE, REC.APELLIDO);
+      END LOOP;  
+      
+      RETURN USUARIO_RETORNAR;
+    
+    END;
+    */
+END;
+/
